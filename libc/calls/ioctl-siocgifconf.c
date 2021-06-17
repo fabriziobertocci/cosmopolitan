@@ -123,8 +123,7 @@ int ioctl_siocgifconf(int fd, void *ifc) {
   if (!IsWindows()) {
     return ioctl_siocgifconf_sysv(fd, (struct ifconf *)ifc);
   } else {
-    return enotsup();
-    //return ioctl_siocgifconf_nt(fd, ifc);
+    return ioctl_siocgifconf_nt(fd, ifc);
   }
 }
 

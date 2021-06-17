@@ -20,13 +20,15 @@
 #include "libc/calls/calls.h"
 #include "libc/calls/internal.h"
 #include "libc/sysv/consts/o.h"
+#include "libc/sysv/consts/iff.h"
 #include "libc/sock/sock.h"
 #include "libc/sock/internal.h"
 #include "libc/sysv/errfuns.h"
 #include "libc/nt/winsock.h"
 
 // TODO: Remove me
-//#include "libc/stdio/stdio.h"
+#include "libc/stdio/stdio.h"
+#define PRINTF (weaken(printf))
 
 #define MAX_INTERFACES  32
 
@@ -43,22 +45,35 @@ textwindows int ioctl_siocgifconf_nt(int fd, struct ifconf *ifc) {
   int ret;
   int i, count;
 
+  PRINTF(">>> ioctl_siocgifconf_nt starting\n");
+
   if (g_fds.p[fd].kind != kFdSocket) {
     return ebadf();
   }
 
+  PRINTF(">>> WSAIoctl=%p, WSAGetLastError=%p\n", weaken(WSAIoctl), weaken(WSAGetLastError));
   ret = weaken(WSAIoctl)(g_fds.p[fd].handle, kNtSioGetInterfaceList, NULL, 0, &iflist, sizeof(iflist), &dwBytes, NULL, NULL);
   if (ret == -1) {
+    PRINTF(">>> WSAIoctl failed with error: %d\n", weaken(__winsockerr)());
     return weaken(__winsockerr)();
   }
 
   count = dwBytes / sizeof(struct NtInterfaceInfo);
-  /*
-  printf("CI> SIO_GET_INTERFACE_LIST success:\n");
+
+  PRINTF("CI> SIO_GET_INTERFACE_LIST success:\n");
   for (i = 0; i < count; ++i) {
-    printf("CI>\t #i: %08x\n", i, iflist[i].iiAddress.sin_addr.s_addr);
+    PRINTF("CI>\t #i address: %08x\n", i, iflist[i].iiAddress.sin_addr.s_addr);
+    PRINTF("CI>\t #i bcast  : %08x\n", i, iflist[i].iiBroadcastAddress.sin_addr.s_addr);
+    PRINTF("CI>\t #i netmask: %08x\n", i, iflist[i].iiNetmask.sin_addr.s_addr);
+    PRINTF("CI>\t #i flags  : %08x - ", i, iflist[i].iiFlags);
+    if (iflist[i].iiFlags & IFF_UP) PRINTF("IFF_UP ");
+    if (iflist[i].iiFlags & IFF_BROADCAST) PRINTF("IFF_BROADCAST ");
+    if (iflist[i].iiFlags & IFF_LOOPBACK) PRINTF("IFF_LOOPBACK ");
+    if (iflist[i].iiFlags & IFF_POINTOPOINT) PRINTF("IFF_POINTOPOINT ");
+    if (iflist[i].iiFlags & IFF_MULTICAST) PRINTF("IFF_MULTICAST ");
+    PRINTF("\n");
   }
-  */
+
   return ret;
 }
 
